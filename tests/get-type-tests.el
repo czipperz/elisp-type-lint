@@ -33,5 +33,59 @@
                  (elisp-type-lint-get-type-region (point-min)
                                                   (point-max)))))
 
+(deftest elisp-type-lint-get-type-region--get-type-2
+    "?a"
+  (should (equal 'int
+                 (elisp-type-lint-get-type-region (point-min)
+                                                  (point-max)))))
+
+(deftest elisp-type-lint-get-type-region--get-type-3
+    "3.0"
+  (should (equal 'float
+                 (elisp-type-lint-get-type-region (point-min)
+                                                  (point-max)))))
+
+(deftest elisp-type-lint-get-type-region--get-type-4
+    ".0"
+  (should (equal 'float
+                 (elisp-type-lint-get-type-region (point-min)
+                                                  (point-max)))))
+
+(deftest elisp-type-lint-get-type-region--get-type-5
+    "3."
+  (should (equal 'float
+                 (elisp-type-lint-get-type-region (point-min)
+                                                  (point-max)))))
+
+(deftest elisp-type-lint-get-type-region--get-type-6
+    "30"
+  (should (equal 'int
+                 (elisp-type-lint-get-type-region (point-min)
+                                                  (point-max)))))
+
+(deftest elisp-type-lint-get-type-region--get-type-7
+    "0"
+  (should (equal 'int
+                 (elisp-type-lint-get-type-region (point-min)
+                                                  (point-max)))))
+
+(deftest elisp-type-lint-get-type-region--get-type-8
+    "3"
+  (should (equal 'int
+                 (elisp-type-lint-get-type-region (point-min)
+                                                  (point-max)))))
+
+(deftest elisp-type-lint-get-type-region--get-type-9
+    "(or 1 3)"
+  (should (equal 'int ;; 1
+                 (elisp-type-lint-get-type-region 5 6)))
+  (should (equal 'int ;; 3
+                 (elisp-type-lint-get-type-region 7 8)))
+  (should (equal '(or int null)
+                 (let ((elisp-type-lint-local-type-table
+                        '((or . (fun (or int null) int int)))))
+                   (elisp-type-lint-get-type-region (point-min)
+                                                    (point-max))))))
+
 (provide 'get-type-tests)
 ;;; get-type-tests.el ends here

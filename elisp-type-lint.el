@@ -92,6 +92,20 @@ SHOULD-FORMAT is t."
 (require 'elisp-type-lint--type-predicates)
 (require 'elisp-type-lint--type-table)
 
+(defun elisp-type-lint--number-p (char)
+  "Test if CHAR is a numeric char (0-9)."
+  (member char '(?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9 ?0)))
+
+(defun elisp-type-lint--pretend-call (arg)
+  "Assert ARG is a function call, get return type."
+  (elisp-type-lint--assert (elisp-type-lint-type-fun-p arg))
+  (nth 1 arg))
+
+(defun elisp-type-lint--lookup (text name)
+  "Internal, don't use.  Intern TEXT and query for it.  Error with NAME."
+  (or (elisp-type-lint-query (intern text))
+      (error "Unbound %s %s" name text)))
+
 (defun elisp-type-lint-get-type-region (beg end)
   "Get Type of the sexp at BEG to END."
   (save-excursion
@@ -105,10 +119,34 @@ SHOULD-FORMAT is t."
           ((= (char-after) ?\()
            (forward-char)
            (forward-sexp)
-           (let ((reg (elisp-type-lint--get-region (1+ beg) (point))))
-             (or
-              (elisp-type-lint-query (intern reg))
-              (error "Unbound function %s" reg))))
+           (elisp-type-lint--pretend-call
+            (elisp-type-lint--lookup
+             (elisp-type-lint--get-region (1+ beg) (point))
+             "function")))
+          ((= (char-after) ?.)
+           (forward-char)
+           (elisp-type-lint--assert (/= (point) end)
+                                    "Invalid sexp: `.'")
+           (if (elisp-type-lint--number-p (char-after))
+               'float
+             (elisp-type-lint--lookup
+              (elisp-type-lint--get-region beg end)
+              "symbol")))
+          ((elisp-type-lint--number-p (char-after))
+           (forward-char)
+           (catch 'done
+             (let (is-float)
+               (while (/= (point) end)
+                 (cond ((elisp-type-lint--number-p (char-after)))
+                       ((= (char-after) ?.)
+                        (setq is-float t))
+                       (t
+                        (throw 'done
+                               (elisp-type-lint--lookup
+                                (elisp-type-lint--get-region beg end)
+                                "symbol"))))
+                 (forward-char))
+               (if is-float 'float 'int))))
           (t
            nil))))
 
